@@ -41,6 +41,7 @@ def parse_cmdline_args():
     parser.add_argument('--dml_weight_dir', type = str, default = '../scripts_v3/weights/') # dir to the trained weights
     parser.add_argument('--dml_weight_name', type = str, 
                         default = '23_od_textLinking_text_loc_angle_size_cap_nontrainable_diffef1_best.hdf5') # specify which weight file to use for local-info based classifier
+    parser.add_argument('--if_capitalization', action = 'store_true') 
     parser.add_argument('--capitalization_weights', type = str, 
                         default = '/data/zekunl/text_linking/style_learner/capitalization_real.hdf5') # trained weights for capitalization classifier
     
@@ -83,10 +84,10 @@ def feature_model():
     return model
 
     
-def clf_model():
+def clf_model(input_dim =  108):
     
     model = Sequential()
-    model.add(Dense(128, input_shape=( ( 50 + 2 + 2 +2 ) * 2,), activation = 'relu')) # word2vec feat: 50; center coords: 2; angle: 1; font area: 1; capitalization: 2; two pairs: *2
+    model.add(Dense(128, input_shape=( input_dim ,), activation = 'relu'))
     model.add(Dense(64,activation = 'relu'))
     model.add(Dense(16,activation = 'relu'))
     model.add(Dense(2, activation='softmax'))
@@ -97,30 +98,40 @@ def clf_model():
     return model
 
 
-def overall_model(cap_weights):
+def overall_model(IF_WITHCAP, cap_weights):
     input_visual1 = Input(shape = (224,224,3)) # each image has been resized to 224*224
     input_visual2 = Input(shape = (224,224,3)) # 
     
-    cap_model = keras.models.load_model(cap_weights)
-    for layer in cap_model.layers:
-        layer.trainable = False
-
-
-    cap_feat1 = cap_model(input_visual1)
-    cap_feat2 = cap_model(input_visual2)
-
+    
     input_text1 = Input(shape = (50,)) # word2vec feature
     input_text2 = Input(shape = (50,))
     
     input_loc1 = Input(shape = (4,)) # location + angle + font area
     input_loc2 = Input(shape = (4,))
+    
+    if IF_WITHCAP:
+        cap_feat1 = cap_model(input_visual1)
+        cap_feat2 = cap_model(input_visual2)
 
-    feat1 = keras.layers.Concatenate(axis=-1)([input_text1, input_loc1,cap_feat1])
-    feat2 = keras.layers.Concatenate(axis=-1)([input_text2, input_loc2,cap_feat2])
+        cap_model = keras.models.load_model(cap_weights)
+        for layer in cap_model.layers:
+            layer.trainable = False
+
+        feat1 = keras.layers.Concatenate(axis=-1)([input_text1, input_loc1,cap_feat1])
+        feat2 = keras.layers.Concatenate(axis=-1)([input_text2, input_loc2,cap_feat2])
+    else:
+        feat1 = keras.layers.Concatenate(axis=-1)([input_text1, input_loc1])
+        feat2 = keras.layers.Concatenate(axis=-1)([input_text2, input_loc2])
 
     x = keras.layers.Concatenate(axis=-1)([feat1, feat2])
     
-    y = clf_model()(x)
+    if IF_WITHCAP:
+        clf_input_dim = ( 50 + 2 + 2 +2 ) * 2 # word2vec feat: 50; center locations: 2; angle: 1; font_area: 1; capitalization: 2; two pairs: *2 
+
+    else:
+        clf_input_dim = ( 50 + 2 + 2 ) * 2 # word2vec feat: 50; center locations: 2; angle: 1; font_area: 1; two pairs: *2 
+
+    y = clf_model(clf_input_dim)(x)
     #y = Dense(2, activation = 'softmax')(x)
     
     model = keras.models.Model([ input_visual1, input_text1, input_loc1, input_visual2, input_text2, input_loc2], [y], name='overall_model')
@@ -250,6 +261,7 @@ def main(args):
     overall_model_weights_dir = args.dml_weight_dir
     #ALPHA = args.ALPHA
     max_batch_size = args.max_batch_size
+    if_capitalization = args.if_capitalization
     
 
 
@@ -259,7 +271,7 @@ def main(args):
         os.makedirs(prediction_output)
     
     
-    model = overall_model(cap_weights = cap_model_weights_path)
+    model = overall_model(if_capitalization, cap_weights = cap_model_weights_path)
     model.summary()
 
     model.compile(optimizer='sgd',
