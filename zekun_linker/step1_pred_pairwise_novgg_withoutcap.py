@@ -150,15 +150,11 @@ def feature_model():
     input_text = Input(shape = (50,))
     input_loc = Input(shape = (4,))
     
-    t = input_text
     
-    l = input_loc
+    concat_x = keras.layers.Concatenate(axis=-1)([ input_text, input_loc])
     
-    x = keras.layers.Concatenate(axis=-1)([ t, l])
     
-    mix_representation = x
-    
-    model = keras.models.Model([input_text, input_loc], mix_representation)
+    model = keras.models.Model([input_text, input_loc], concat_x)
     print (model.summary())
     
     return model
@@ -167,7 +163,7 @@ def feature_model():
 def clf_model():
     
     model = Sequential()
-    model.add(Dense(128, input_shape=( ( 50 + 2 + 2 ) * 2,), activation = 'relu'))
+    model.add(Dense(128, input_shape=( ( 50 + 2 + 2 ) * 2,), activation = 'relu')) # word2vec feat: 50; center locations: 2; angle: 1; font_area: 1; two pairs: *2 
     model.add(Dense(64,activation = 'relu'))
     model.add(Dense(16,activation = 'relu'))
     model.add(Dense(2, activation='softmax'))

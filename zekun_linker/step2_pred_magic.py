@@ -33,21 +33,21 @@ set_session(tf.Session(config=config))
 
 def parse_cmdline_args():
     parser = argparse.ArgumentParser(description='Parser for probability map prediction code')
-    parser.add_argument('--prob_weight_path', type = str, default = '/data/zekunl/text_linking/heatmap/')
-    parser.add_argument('--prediction_dir', type = str, default = '/data/zekunl/text_linking/predictions/')
-    parser.add_argument('--gt_dir', type = str, default = '/data/zekunl/mydata/historical-map-groundtruth-25/')
-    parser.add_argument('--word_coords_dir', type = str, default = '/data/zekunl/Geolocalizer/google_grouping/word_coords_list/')
+    parser.add_argument('--prob_weight_path', type = str, default = '/data/zekunl/text_linking/heatmap/') # trained weights for global-info based classifier
+    parser.add_argument('--prediction_dir', type = str, default = '/data/zekunl/text_linking/predictions/') # result from the first step
+    parser.add_argument('--gt_dir', type = str, default = '/data/zekunl/mydata/historical-map-groundtruth-25/') # directory that contains historical map images
+    parser.add_argument('--word_coords_dir', type = str, default = '/data/zekunl/Geolocalizer/google_grouping/word_coords_list/') # directory that contains bbox information of words
     parser.add_argument('--output_dir', type = str, 
-                        default ='/data/zekunl/text_linking/step2_predictions/' )
+                        default ='/data/zekunl/text_linking/step2_predictions/' ) # output directory for step2
     
-    parser.add_argument('--std_size', type = int, default = 256)
-    parser.add_argument('--prob_thresh', type = float, default = 0.5)
-    parser.add_argument('--MODE',action = 'store_true')
+    parser.add_argument('--std_size', type = int, default = 256) # input images size of the global information based classifier
+    parser.add_argument('--prob_thresh', type = float, default = 0.5) # hyper param used to binarize the output probability map
+    parser.add_argument('--MODE',action = 'store_true') # using mode color or mean color
     
-    parser.add_argument('--map_type', type = str, default = 'usgs')
-    parser.add_argument('--WRITE_TO_FILE',action = 'store_true')
-    parser.add_argument('--IF_SPECIFIC',action = 'store_true')
-    parser.add_argument('--specific_map_name', type = str, default = '') # name without jpg appendix
+    parser.add_argument('--map_type', type = str, default = 'usgs') # map type
+    parser.add_argument('--WRITE_TO_FILE',action = 'store_true') # if write the result to file
+    parser.add_argument('--IF_SPECIFIC',action = 'store_true') # if debug for a specific map
+    parser.add_argument('--specific_map_name', type = str, default = '') # name without jpg appendix # if IF_SPECIFIC is true, will debug the image specified by this param.
     return (parser.parse_args())
 
 

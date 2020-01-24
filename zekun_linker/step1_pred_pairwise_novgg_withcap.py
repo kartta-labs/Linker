@@ -33,46 +33,23 @@ set_session(tf.Session(config=config))
 
 def parse_cmdline_args():
     parser = argparse.ArgumentParser(description='Parser for deep metric learning prediction code')
-    parser.add_argument('--preprocess_dir', type = str, default = '/data/zekunl/Geolocalizer/google_grouping/')
-    parser.add_argument('--map_dir', type = str, default = '/data/zekunl/mydata/historical-map-groundtruth-25/')
-    parser.add_argument('--word2vec_filepath', type = str, default = '../word2vec/glove.6B/glove.6B.50d.txt.word2vec')
-    parser.add_argument('--pred_output_dir', type = str, default = '../predictions/')
-    parser.add_argument('--map_type', type = str, default = 'od')
-    parser.add_argument('--dml_weight_dir', type = str, default = '../scripts_v3/weights/')
+    parser.add_argument('--preprocess_dir', type = str, default = '/data/zekunl/Geolocalizer/google_grouping/') # directory that contains word list files and bbox list files
+    parser.add_argument('--map_dir', type = str, default = '/data/zekunl/mydata/historical-map-groundtruth-25/') # directory that stores historical map images
+    parser.add_argument('--word2vec_filepath', type = str, default = '../word2vec/glove.6B/glove.6B.50d.txt.word2vec') # pretrained word2vec weights
+    parser.add_argument('--pred_output_dir', type = str, default = '../predictions/') # output directory of the first step
+    parser.add_argument('--map_type', type = str, default = 'od') # specify image type
+    parser.add_argument('--dml_weight_dir', type = str, default = '../scripts_v3/weights/') # dir to the trained weights
     parser.add_argument('--dml_weight_name', type = str, 
-                        default = '23_od_textLinking_text_loc_angle_size_cap_nontrainable_diffef1_best.hdf5')
+                        default = '23_od_textLinking_text_loc_angle_size_cap_nontrainable_diffef1_best.hdf5') # specify which weight file to use for local-info based classifier
     parser.add_argument('--capitalization_weights', type = str, 
-                        default = '/data/zekunl/text_linking/style_learner/capitalization_real.hdf5')
+                        default = '/data/zekunl/text_linking/style_learner/capitalization_real.hdf5') # trained weights for capitalization classifier
     
-    parser.add_argument('--ALPHA', type = int, default = 1)
-    parser.add_argument('--max_batch_size', type = int, default = 256)
+    parser.add_argument('--ALPHA', type = int, default = 1) # hyper param for trip-loss
+    parser.add_argument('--max_batch_size', type = int, default = 256) # hyper param to specify how many images to process at a time
     return (parser.parse_args())
     
-
-# code for removing special caracters, puctuations
-# https://mlwhiz.com/blog/2019/01/17/deeplearning_nlp_preprocess/
-puncts = [',', '.', '"', ':', ')', '(', '-', '!', '?', '|', ';', "'", '$', '&', '/', '[', ']', '>', '%', '=', '#', '*', '+', '\\', '•',  '~', '@', '£', 
- '·', '_', '{', '}', '©', '^', '®', '`',  '<', '→', '°', '€', '™', '›',  '♥', '←', '×', '§', '″', '′', 'Â', '█', '½', 'à', '…', 
- '“', '★', '”', '–', '●', 'â', '►', '−', '¢', '²', '¬', '░', '¶', '↑', '±', '¿', '▾', '═', '¦', '║', '―', '¥', '▓', '—', '‹', '─', 
- '▒', '：', '¼', '⊕', '▼', '▪', '†', '■', '’', '▀', '¨', '▄', '♫', '☆', 'é', '¯', '♦', '¤', '▲', 'è', '¸', '¾', 'Ã', '⋅', '‘', '∞', 
- '∙', '）', '↓', '、', '│', '（', '»', '，', '♪', '╩', '╚', '³', '・', '╦', '╣', '╔', '╗', '▬', '❤', 'ï', 'Ø', '¹', '≤', '‡', '√', ]
-
-def clean_text(x):
-    x = str(x)
-    for punct in puncts:
-        if punct in x:
-            x = x.replace(punct, "")
-    return x
-def clean_numbers(x):
-    if bool(re.search(r'\d', x)):
-        x = re.sub('[0-9]{5,}', '#####', x)
-        x = re.sub('[0-9]{4}', '####', x)
-        x = re.sub('[0-9]{3}', '###', x)
-        x = re.sub('[0-9]{2}', '##', x)
-    return x
-
 def clean_string(in_string):
-        return  clean_numbers(clean_text(in_string.lower().decode('utf-8', 'ignore')))
+    return re.sub('[^0-9A-Za-z]+', ' ', in_string.lower().decode('utf-8', 'ignore'))	
 
 
     
@@ -90,74 +67,17 @@ def trip_feat_loss(x):
 
 def trip_feat_loss_shape(shapes):
     shape1, shape2, shape3 = shapes
-    return (shape1[0], 1)
-
-    
-def my_visual_model():
-    img_input = Input(shape=(224,224,3))
-    
-    x = layers.Conv2D(32, (3, 3),
-                      activation='relu',
-                      padding='same',
-                      name='block1_conv1')(img_input)
-    
-    x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
-
-    # Block 2
-    x = layers.Conv2D(64, (3, 3),
-                      activation='relu',
-                      padding='same',
-                      name='block2_conv1')(x)
-    
-    x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
-
-    # Block 3
-    x = layers.Conv2D(128, (3, 3),
-                      activation='relu',
-                      padding='same',
-                      name='block3_conv1')(x)
-    
-    x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
-
-    # Block 4
-    x = layers.Conv2D(128, (3, 3),
-                      activation='relu',
-                      padding='same',
-                      name='block4_conv1')(x)
-    
-    x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
-
-    # Block 5
-    x = layers.Conv2D(128, (3, 3),
-                      activation='relu',
-                      padding='same',
-                      name='block5_conv1')(x)
-    
-    x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
-
-
-    # Classification block
-    x = layers.Flatten(name='flatten')(x)
-    x = layers.Dense(1024, activation='relu', name='fc1')(x)
-    x = layers.Dense(500, activation='softmax', name='predictions')(x)
-    
-    model = keras.models.Model([img_input], [x], name='my_visual_model')
-    
-    return model
+    return (shape1[0], 1) 
 
 def feature_model():
     input_text = Input(shape = (50,))
     input_loc = Input(shape = (4,))
     
-    t = input_text
     
-    l = input_loc
+    x = keras.layers.Concatenate(axis=-1)([input_text, input_loc])
     
-    x = keras.layers.Concatenate(axis=-1)([ t, l])
     
-    mix_representation = x
-    
-    model = keras.models.Model([input_text, input_loc], mix_representation)
+    model = keras.models.Model([input_text, input_loc], x)
     print( model.summary())
     
     return model
@@ -166,7 +86,7 @@ def feature_model():
 def clf_model():
     
     model = Sequential()
-    model.add(Dense(128, input_shape=( ( 50 + 2 + 2 +2 ) * 2,), activation = 'relu'))
+    model.add(Dense(128, input_shape=( ( 50 + 2 + 2 +2 ) * 2,), activation = 'relu')) # word2vec feat: 50; center coords: 2; angle: 1; font area: 1; capitalization: 2; two pairs: *2
     model.add(Dense(64,activation = 'relu'))
     model.add(Dense(16,activation = 'relu'))
     model.add(Dense(2, activation='softmax'))
@@ -178,8 +98,8 @@ def clf_model():
 
 
 def overall_model(cap_weights):
-    input_visual1 = Input(shape = (224,224,3))
-    input_visual2 = Input(shape = (224,224,3))
+    input_visual1 = Input(shape = (224,224,3)) # each image has been resized to 224*224
+    input_visual2 = Input(shape = (224,224,3)) # 
     
     cap_model = keras.models.load_model(cap_weights)
     for layer in cap_model.layers:
@@ -189,10 +109,10 @@ def overall_model(cap_weights):
     cap_feat1 = cap_model(input_visual1)
     cap_feat2 = cap_model(input_visual2)
 
-    input_text1 = Input(shape = (50,))
+    input_text1 = Input(shape = (50,)) # word2vec feature
     input_text2 = Input(shape = (50,))
     
-    input_loc1 = Input(shape = (4,))
+    input_loc1 = Input(shape = (4,)) # location + angle + font area
     input_loc2 = Input(shape = (4,))
 
     feat1 = keras.layers.Concatenate(axis=-1)([input_text1, input_loc1,cap_feat1])
@@ -384,16 +304,16 @@ def main(args):
             anchor_fontsize = font_size_array[anchor_idx]
 
 
-
-            OV = []
-            OT = []
-            OL = []
-            OA = []
-            OF = []
+            ## input tensors of the model that store information for another text region that need to be compared with the query region.
+            OV = [] #OtherVisual: stores the image patch
+            OT = [] #OtherText: stores word2vec feat
+            OL = [] #OtherLocation: Stores location 
+            OA = [] #OtherAngle: stores angle info
+            OF = [] #OtherFontArea: stores font area info
 
             Y_pred = []
             pred_values = []
-
+            # other_idx iterates through all other text regions on the map and compare that text region with the query region. 
             for other_idx in range(total_num_regions):
                 other_img = images[other_idx]
                 other_text = text_dict[other_idx]
@@ -421,7 +341,7 @@ def main(args):
                     OL = np.array(OL)
                     OA = np.array(OA)
                     OF = np.array(OF)
-                    OL = np.concatenate([OL, OA, OF], axis = 1)
+                    OL = np.concatenate([OL, OA, OF], axis = 1) # merged the location, angle and font size to one tensor since the overall_model takes only three input tensors.
 
                     XV = np.repeat(anchor_img[np.newaxis, :], OV.shape[0], axis = 0 )
                     XT = np.repeat(anchor_tf[np.newaxis, :], OV.shape[0], axis = 0 )

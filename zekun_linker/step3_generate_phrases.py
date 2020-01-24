@@ -11,11 +11,11 @@ import argparse
 def parse_cmdline_args():
     parser = argparse.ArgumentParser(description='Parser for location phrase generation')
     parser.add_argument('--input_pred_dir', type = str, 
-                        default = '/data/zekunl/text_linking/pred_scripts/predictions_v1_20_od/')
+                        default = '/data/zekunl/text_linking/pred_scripts/predictions_v1_20_od/') # output from the step2
     parser.add_argument('--vision_api_result_dir', type = str, 
-                        default = '/data/zekunl/Geolocalizer/google_grouping/')
-    parser.add_argument('--IF_WCC', action = 'store_true')
-    parser.add_argument('--output_phrases_dir', type = str, default = 'phrases_v1_20_od/')
+                        default = '/data/zekunl/Geolocalizer/google_grouping/') # dir that stores word list
+    parser.add_argument('--IF_WCC', action = 'store_true') # use weakly connected component or strongly connected componnet
+    parser.add_argument('--output_phrases_dir', type = str, default = 'phrases_v1_20_od/') # output folder for step3
     return (parser.parse_args())
 
 
